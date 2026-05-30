@@ -1,7 +1,7 @@
 package com.transaction.service;
 
-import com.transaction.model.*;
 import com.transaction.interfaces.*;
+import com.transaction.model.*;
 import java.util.*;
 
 public class BankService implements Transferable, Requestable, Authenticatable, Searchable {
@@ -10,6 +10,38 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
     private Map<String, List<Transaction>> transactionHistory = new HashMap<>();
     private List<MoneyRequest> moneyRequests = new ArrayList<>();
     private Customer currentLoggedInCustomer = null;
+    
+    // ========== REGISTRATION ==========
+    
+    public boolean registerCustomer(String username, String fullName, String phoneNumber, 
+                                     double initialDeposit, String password) {
+        if (customerDatabase.containsKey(username)) {
+            System.out.println("[ERROR] Username already exists!");
+            return false;
+        }
+        if (!phoneNumber.matches("\\d{9,12}")) {
+            System.out.println("[ERROR] Invalid phone number!");
+            return false;
+        }
+        if (initialDeposit < 0) {
+            System.out.println("[ERROR] Initial deposit cannot be negative!");
+            return false;
+        }
+        if (password == null || password.length() < 4) {
+            System.out.println("[ERROR] Password must be at least 4 characters!");
+            return false;
+        }
+        
+        Customer newCustomer = new Customer(username, fullName, phoneNumber, initialDeposit, password);
+        customerDatabase.put(username, newCustomer);
+        transactionHistory.put(username, new ArrayList<>());
+        
+        System.out.println("\n[OK] ACCOUNT OPENED SUCCESSFULLY!");
+        System.out.println("   Account Number: " + newCustomer.getAccountNumber());
+        System.out.println("   Username: " + username);
+        System.out.printf("   Initial Balance: $%,.2f%n", initialDeposit);
+        return true;
+    }
     
     // ========== AUTHENTICATABLE INTERFACE METHODS ==========
     
@@ -63,8 +95,14 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         return currentLoggedInCustomer != null;
     }
     
-    // ========== TRANSFERABLE INTERFACE METHODS ==========
+    // ========== OVERLOADED SEND MONEY METHODS ==========
     
+    // Version 1: Basic send (no description)
+    public boolean sendMoney(String toUsername, double amount) {
+        return sendMoney(toUsername, amount, "No description");
+    }
+    
+    // Version 2: Send with description (original)
     @Override
     public boolean sendMoney(String toUsername, double amount, String description) {
         if (currentLoggedInCustomer == null) {
@@ -78,11 +116,11 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         
         Customer recipient = customerDatabase.get(toUsername);
         if (recipient == null) {
-            System.out.println("[ERROR] Recipient '" + toUsername + "' not found!");
+            System.out.println("[ERROR] Recipient not found!");
             return false;
         }
         if (amount <= 0) {
-            System.out.println("[ERROR] Amount must be greater than $0!");
+            System.out.println("[ERROR] Amount must be greater than 0!");
             return false;
         }
         
@@ -103,34 +141,32 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         transactionHistory.get(currentLoggedInCustomer.getUsername()).add(senderTx);
         transactionHistory.get(recipient.getUsername()).add(recipientTx);
         
-        System.out.println("\n+-----------------------------------------+");
-        System.out.println("|           TRANSACTION RECEIPT           |");
-        System.out.println("+-----------------------------------------+");
-        System.out.printf("| Amount:      $%,.2f%n", amount);
-        System.out.println("| From:        " + currentLoggedInCustomer.getFullName());
-        System.out.println("| To:          " + recipient.getFullName());
-        System.out.println("| Description: " + description);
-        System.out.println("| Status:      [OK] COMPLETED");
-        System.out.printf("| New Balance: $%,.2f%n", currentLoggedInCustomer.getBalance());
-        System.out.println("+-----------------------------------------+");
+        System.out.println("\n┌─────────────────────────────────────────┐");
+        System.out.println("│           TRANSACTION RECEIPT           │");
+        System.out.println("├─────────────────────────────────────────┤");
+        System.out.printf("│ Amount:      $%,.2f%n", amount);
+        System.out.println("│ From:        " + currentLoggedInCustomer.getFullName());
+        System.out.println("│ To:          " + recipient.getFullName());
+        System.out.println("│ Description: " + description);
+        System.out.println("│ Status:      [OK] COMPLETED");
+        System.out.printf("│ New Balance: $%,.2f%n", currentLoggedInCustomer.getBalance());
+        System.out.println("└─────────────────────────────────────────┘");
         return true;
     }
     
-    @Override
-    public boolean receiveMoney(Customer fromCustomer, double amount, String description) {
-        if (currentLoggedInCustomer == null) {
-            System.out.println("[ERROR] Please login first!");
-            return false;
-        }
-        currentLoggedInCustomer.deposit(amount);
-        Transaction tx = new Transaction(fromCustomer, currentLoggedInCustomer, 
-            amount, description, TransactionType.RECEIVE);
-        transactionHistory.get(currentLoggedInCustomer.getUsername()).add(tx);
-        return true;
+    // Version 3: Send using Customer object
+    public boolean sendMoney(Customer recipient, double amount, String description) {
+        return sendMoney(recipient.getUsername(), amount, description);
     }
     
-    // ========== REQUESTABLE INTERFACE METHODS ==========
+    // ========== OVERLOADED REQUEST MONEY METHODS ==========
     
+    // Version 1: Basic request (no reason)
+    public void requestMoney(String fromUsername, double amount) {
+        requestMoney(fromUsername, amount, "No reason given");
+    }
+    
+    // Version 2: Request with reason (original)
     @Override
     public void requestMoney(String fromUsername, double amount, String reason) {
         if (currentLoggedInCustomer == null) {
@@ -144,27 +180,32 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         
         Customer target = customerDatabase.get(fromUsername);
         if (target == null) {
-            System.out.println("[ERROR] User '" + fromUsername + "' not found!");
+            System.out.println("[ERROR] User not found!");
             return;
         }
         if (amount <= 0) {
-            System.out.println("[ERROR] Amount must be greater than $0!");
+            System.out.println("[ERROR] Amount must be greater than 0!");
             return;
         }
         
         MoneyRequest request = new MoneyRequest(currentLoggedInCustomer, target, amount, reason);
         moneyRequests.add(request);
         
-        System.out.println("\n+-----------------------------------------+");
-        System.out.println("|           MONEY REQUEST SENT            |");
-        System.out.println("+-----------------------------------------+");
-        System.out.printf("| Requested:   $%,.2f%n", amount);
-        System.out.println("| From:        " + target.getFullName());
-        System.out.println("| To:          " + currentLoggedInCustomer.getFullName());
-        System.out.println("| Reason:      " + reason);
-        System.out.println("| Request ID:  " + request.getRequestId());
-        System.out.println("| Status:      PENDING");
-        System.out.println("+-----------------------------------------+");
+        System.out.println("\n┌─────────────────────────────────────────┐");
+        System.out.println("│           MONEY REQUEST SENT            │");
+        System.out.println("├─────────────────────────────────────────┤");
+        System.out.printf("│ Requested:   $%,.2f%n", amount);
+        System.out.println("│ From:        " + target.getFullName());
+        System.out.println("│ To:          " + currentLoggedInCustomer.getFullName());
+        System.out.println("│ Reason:      " + reason);
+        System.out.println("│ Request ID:  " + request.getRequestId());
+        System.out.println("│ Status:      PENDING");
+        System.out.println("└─────────────────────────────────────────┘");
+    }
+    
+    // Version 3: Request using Customer object
+    public void requestMoney(Customer fromCustomer, double amount, String reason) {
+        requestMoney(fromCustomer.getUsername(), amount, reason);
     }
     
     @Override
@@ -174,12 +215,6 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
                 if (req.getTarget().equals(currentLoggedInCustomer)) {
                     boolean approved = req.approve();
                     if (approved) {
-                        Transaction tx = new Transaction(req.getTarget(), req.getRequester(),
-                            req.getAmount(), "REQUEST APPROVED: " + req.getReason(), TransactionType.SEND);
-                        transactionHistory.get(req.getTarget().getUsername()).add(tx);
-                        transactionHistory.get(req.getRequester().getUsername()).add(
-                            new Transaction(req.getTarget(), req.getRequester(), req.getAmount(),
-                            "REQUEST FULFILLED: " + req.getReason(), TransactionType.RECEIVE));
                         System.out.println("[OK] Request #" + requestId + " approved!");
                         return true;
                     }
@@ -187,10 +222,9 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
                     System.out.println("[ERROR] You cannot approve this request!");
                     return false;
                 }
-                return false;
             }
         }
-        System.out.println("[ERROR] Request #" + requestId + " not found!");
+        System.out.println("[ERROR] Request not found!");
         return false;
     }
     
@@ -206,7 +240,7 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
                 return;
             }
         }
-        System.out.println("[ERROR] Request #" + requestId + " not found!");
+        System.out.println("[ERROR] Request not found!");
     }
     
     @Override
@@ -224,16 +258,40 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         }
     }
     
-    // ========== SEARCHABLE INTERFACE METHODS ==========
+    @Override
+    public boolean receiveMoney(Customer fromCustomer, double amount, String description) {
+        if (currentLoggedInCustomer == null) {
+            System.out.println("[ERROR] Please login first!");
+            return false;
+        }
+        currentLoggedInCustomer.deposit(amount);
+        Transaction tx = new Transaction(fromCustomer, currentLoggedInCustomer, 
+            amount, description, TransactionType.RECEIVE);
+        transactionHistory.get(currentLoggedInCustomer.getUsername()).add(tx);
+        System.out.println("[OK] Received $" + amount + " from " + fromCustomer.getUsername());
+        return true;
+    }
+    
+    // ========== OVERLOADED SEARCH METHODS ==========
     
     @Override
     public Customer findCustomerByUsername(String username) {
         return customerDatabase.get(username);
     }
     
+    // Overloaded: Search by Customer object
+    public Customer findCustomerByUsername(Customer customer) {
+        return customer;
+    }
+    
     @Override
     public List<Transaction> findTransactionsByCustomer(String username) {
         return transactionHistory.getOrDefault(username, new ArrayList<>());
+    }
+    
+    // Overloaded: Search by Customer object
+    public List<Transaction> findTransactionsByCustomer(Customer customer) {
+        return findTransactionsByCustomer(customer.getUsername());
     }
     
     @Override
@@ -263,37 +321,7 @@ public class BankService implements Transferable, Requestable, Authenticatable, 
         return result;
     }
     
-    // ========== REGISTRATION AND VIEW METHODS ==========
-    
-    public boolean registerCustomer(String username, String fullName, String phoneNumber, 
-                                     double initialDeposit, String password) {
-        if (customerDatabase.containsKey(username)) {
-            System.out.println("[ERROR] Username already exists!");
-            return false;
-        }
-        if (!phoneNumber.matches("\\d{9,12}")) {
-            System.out.println("[ERROR] Invalid phone number!");
-            return false;
-        }
-        if (initialDeposit < 0) {
-            System.out.println("[ERROR] Initial deposit cannot be negative!");
-            return false;
-        }
-        if (password == null || password.length() < 4) {
-            System.out.println("[ERROR] Password must be at least 4 characters!");
-            return false;
-        }
-        
-        Customer newCustomer = new Customer(username, fullName, phoneNumber, initialDeposit, password);
-        customerDatabase.put(username, newCustomer);
-        transactionHistory.put(username, new ArrayList<>());
-        
-        System.out.println("\n[OK] ACCOUNT OPENED SUCCESSFULLY!");
-        System.out.println("   Account Number: " + newCustomer.getAccountNumber());
-        System.out.println("   Username: " + username);
-        System.out.printf("   Initial Balance: $%,.2f%n", initialDeposit);
-        return true;
-    }
+    // ========== OTHER METHODS ==========
     
     public void checkBalance() {
         if (currentLoggedInCustomer == null) {

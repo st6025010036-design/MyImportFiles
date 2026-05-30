@@ -1,9 +1,7 @@
 package com.transaction;
 
-import com.transaction.service.BankService;
 import com.transaction.model.Customer;
-import com.transaction.model.Transaction;
-import com.transaction.model.MoneyRequest;
+import com.transaction.service.BankService;
 import java.util.Scanner;
 
 public class Main {
@@ -12,9 +10,8 @@ public class Main {
     
     public static void main(String[] args) {
         System.out.println("\n+--------------------------------------------------+");
-        System.out.println("|         TRANSACTION SYSTEM - WEEK 5             |");
-        System.out.println("|    Interfaces: Displayable, Transferable,       |");
-        System.out.println("|    Requestable, Authenticatable, Searchable     |");
+        System.out.println("|         TRANSACTION SYSTEM - WEEK 7             |");
+        System.out.println("|    Overriding + Overloading Demonstration       |");
         System.out.println("+--------------------------------------------------+");
         
         createSampleData();
@@ -34,10 +31,9 @@ public class Main {
         System.out.println("+----------------------------------------+");
         System.out.println("|  1. Open New Account                   |");
         System.out.println("|  2. Login                              |");
-        System.out.println("|  3. Show All Customers (Displayable)   |");
+        System.out.println("|  3. Show All Customers                 |");
         System.out.println("|  4. Show Statistics                    |");
-        System.out.println("|  5. Test Searchable Interface          |");
-        System.out.println("|  6. Exit                               |");
+        System.out.println("|  5. Exit                               |");
         System.out.println("+----------------------------------------+");
         System.out.print("\n[?] Choose: ");
         
@@ -49,8 +45,7 @@ public class Main {
             case 2: login(); break;
             case 3: bank.showAllCustomers(); break;
             case 4: bank.showStatistics(); break;
-            case 5: testSearchable(); break;
-            case 6: System.out.println("\n[OK] Goodbye!"); System.exit(0); break;
+            case 5: System.out.println("\n[OK] Goodbye!"); System.exit(0); break;
             default: System.out.println("[ERROR] Invalid choice!");
         }
     }
@@ -60,15 +55,17 @@ public class Main {
         System.out.println("\n+--------------------------------------------------+");
         System.out.println("|     WELCOME, " + String.format("%-32s", name.toUpperCase()) + "|");
         System.out.println("+--------------------------------------------------+");
-        System.out.println("|  1. Send Money (Transferable)                   |");
-        System.out.println("|  2. Request Money (Requestable)                 |");
-        System.out.println("|  3. Check Balance                               |");
-        System.out.println("|  4. Transaction History                         |");
-        System.out.println("|  5. Show All Customers (Displayable)            |");
-        System.out.println("|  6. Pending Requests (Requestable)              |");
-        System.out.println("|  7. Approve Request (Requestable)               |");
-        System.out.println("|  8. Change Password (Authenticatable)           |");
-        System.out.println("|  9. Logout (Authenticatable)                    |");
+        System.out.println("|  1. Send Money                                 |");
+        System.out.println("|  2. Request Money                              |");
+        System.out.println("|  3. Check Balance                              |");
+        System.out.println("|  4. Transaction History                        |");
+        System.out.println("|  5. Show All Customers                         |");
+        System.out.println("|  6. Pending Requests                           |");
+        System.out.println("|  7. Approve Request                            |");
+        System.out.println("|  8. Change Password                            |");
+        System.out.println("|  9. Deposit Money (3 Ways)                     |");
+        System.out.println("| 10. Withdraw Money                             |");
+        System.out.println("| 11. Logout                                     |");
         System.out.println("+--------------------------------------------------+");
         System.out.print("\n[?] Choose: ");
         
@@ -84,9 +81,132 @@ public class Main {
             case 6: bank.showPendingRequests(); break;
             case 7: approveRequest(); break;
             case 8: changePassword(); break;
-            case 9: bank.logout(); break;
+            case 9: depositMenu(); break;
+            case 10: withdrawMenu(); break;
+            case 11: bank.logout(); break;
             default: System.out.println("[ERROR] Invalid choice!");
         }
+    }
+    
+    private static void depositMenu() {
+        Customer current = bank.getCurrentCustomer();
+        if (current == null) {
+            System.out.println("[ERROR] Please login first!");
+            return;
+        }
+        
+        System.out.println("\n+--------------------------------------------------+");
+        System.out.println("|           DEPOSIT MONEY (3 WAYS)                  |");
+        System.out.println("+--------------------------------------------------+");
+        System.out.println("|  1. Receive from another account (Online)        |");
+        System.out.println("|  2. ATM Deposit (Cash/Check at ATM)              |");
+        System.out.println("|  3. Teller Deposit (Bank Counter)                |");
+        System.out.println("|  4. Back to Menu                                 |");
+        System.out.println("+--------------------------------------------------+");
+        System.out.print("\n[?] Choose: ");
+        
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+        
+        switch (choice) {
+            case 1:
+                System.out.print("Enter amount: $");
+                double amount = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("From account number: ");
+                String fromAccount = scanner.nextLine();
+                System.out.print("Transaction ID: ");
+                String txId = scanner.nextLine();
+                System.out.print("Note: ");
+                String note = scanner.nextLine();
+                current.depositReceive(amount, fromAccount, txId, note);
+                break;
+            case 2:
+                System.out.print("Enter amount: $");
+                amount = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("ATM ID (e.g., ATM001): ");
+                String atmId = scanner.nextLine();
+                System.out.print("ATM Location: ");
+                String location = scanner.nextLine();
+                System.out.print("Deposit Type (Cash/Check): ");
+                String depositType = scanner.nextLine();
+                System.out.print("Envelope ID: ");
+                String envelopeId = scanner.nextLine();
+                current.depositATM(amount, atmId, location, depositType, envelopeId);
+                break;
+            case 3:
+                System.out.print("Enter amount: $");
+                amount = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("Teller ID: ");
+                String tellerId = scanner.nextLine();
+                System.out.print("Teller Name: ");
+                String tellerName = scanner.nextLine();
+                System.out.print("Source Type (Cash/Check): ");
+                String source = scanner.nextLine();
+                System.out.print("Signature: ");
+                String signature = scanner.nextLine();
+                current.depositTeller(amount, tellerId, tellerName, source, signature);
+                break;
+            case 4:
+                return;
+            default:
+                System.out.println("[ERROR] Invalid choice!");
+        }
+        System.out.println("\n[INFO] New balance: $" + current.getBalance());
+    }
+    
+    private static void withdrawMenu() {
+        Customer current = bank.getCurrentCustomer();
+        if (current == null) {
+            System.out.println("[ERROR] Please login first!");
+            return;
+        }
+        
+        System.out.println("\n+--------------------------------------------------+");
+        System.out.println("|           WITHDRAW MONEY                          |");
+        System.out.println("+--------------------------------------------------+");
+        System.out.println("|  1. Basic Withdraw                               |");
+        System.out.println("|  2. Withdraw with Reason                         |");
+        System.out.println("|  3. Withdraw with Receipt                        |");
+        System.out.println("|  4. Back to Menu                                 |");
+        System.out.println("+--------------------------------------------------+");
+        System.out.print("\n[?] Choose: ");
+        
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+        
+        switch (choice) {
+            case 1:
+                System.out.print("Enter amount: $");
+                double amount = scanner.nextDouble();
+                scanner.nextLine();
+                current.withdraw(amount);
+                break;
+            case 2:
+                System.out.print("Enter amount: $");
+                amount = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("Reason: ");
+                String reason = scanner.nextLine();
+                current.withdrawReason(amount, reason);
+                break;
+            case 3:
+                System.out.print("Enter amount: $");
+                amount = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("Print receipt? (yes/no): ");
+                String receipt = scanner.nextLine();
+                boolean printReceipt = receipt.equalsIgnoreCase("yes");
+                current.withdrawReceipt(amount, printReceipt);
+                break;
+            case 4:
+                return;
+            default:
+                System.out.println("[ERROR] Invalid choice!");
+        }
+        System.out.println("\n[INFO] New balance: $" + current.getBalance());
     }
     
     private static void register() {
@@ -124,10 +244,15 @@ public class Main {
         System.out.print("Amount: $");
         double amount = scanner.nextDouble();
         scanner.nextLine();
-        System.out.print("Description: ");
+        System.out.print("Description (or press Enter for no description): ");
         String desc = scanner.nextLine();
         
-        bank.sendMoney(to, amount, desc);
+        if (desc.isEmpty()) {
+            bank.sendMoney(to, amount);
+        } else {
+            bank.sendMoney(to, amount, desc);
+        }
+        System.out.println("[INFO] New balance: $" + bank.getCurrentCustomer().getBalance());
     }
     
     private static void requestMoney() {
@@ -138,10 +263,14 @@ public class Main {
         System.out.print("Amount: $");
         double amount = scanner.nextDouble();
         scanner.nextLine();
-        System.out.print("Reason: ");
+        System.out.print("Reason (or press Enter for no reason): ");
         String reason = scanner.nextLine();
         
-        bank.requestMoney(from, amount, reason);
+        if (reason.isEmpty()) {
+            bank.requestMoney(from, amount);
+        } else {
+            bank.requestMoney(from, amount, reason);
+        }
     }
     
     private static void approveRequest() {
@@ -166,33 +295,7 @@ public class Main {
             return;
         }
         
-        bank.changePassword(oldPwd, newPwd);
-    }
-    
-    private static void testSearchable() {
-        System.out.println("\n=== TESTING SEARCHABLE INTERFACE ===\n");
-        
-        System.out.print("Enter username to search: ");
-        String username = scanner.nextLine();
-        
-        Customer found = bank.findCustomerByUsername(username);
-        if (found != null) {
-            found.displayInfo();
-        } else {
-            System.out.println("[ERROR] Customer not found!");
-        }
-        
-        System.out.print("\nEnter min amount: $");
-        double min = scanner.nextDouble();
-        System.out.print("Enter max amount: $");
-        double max = scanner.nextDouble();
-        scanner.nextLine();
-        
-        var transactions = bank.findTransactionsByAmountRange(min, max);
-        System.out.println("\nTransactions between $" + min + " and $" + max + ":");
-        for (Transaction t : transactions) {
-            System.out.println(t);
-        }
+        bank.getCurrentCustomer().changePassword(oldPwd, newPwd);
     }
     
     private static void createSampleData() {
